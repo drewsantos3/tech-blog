@@ -1,133 +1,81 @@
-const router = require('express').Router();
-const { User, Post, Comment } = require('../../models');
-const withAuth = require('../../utils/auth');
+const router = require("express").Router();
+const withAuth = require("../utils/auth");
+const { Post, User, Comment } = require("../models");
 
-// GET all posts
-router.get('/', (req, res) => {
-    Post.findAll({
-        attributes: [
-            'id',
-            'title',
-            'content',
-            'created_at'
-        ],
-        order: [['created_at', 'DESC']],
-        include: [
-            {
-                model: Comment,
-                attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
-                include: {
-                    model: User,
-                    attributes: ['username']
-                }
-            },
-            {
-                model: User,
-                attributes: ['username']
-            }
-        ]
-    })
-    .then(dbPostData => res.json(dbPostData))
-    .catch(err => {
-        console.log(err);
-        res.status(500).json(err);
-    });
+
+router.get("/", async (req, res) => {
+  const postData = await Post.findAll({ include: [User] }).catch((err) => {
+    res.json(err);
+  });
+  const posts = postData.map((post) => post.get({ plain: true }));
+  res.render("homepage", { posts, loggedIn: req.session.loggedIn });
 });
 
-router.get('/login', (req, res) => {
+router.get("/login", (req, res) => {
+  if (req.session.loggedIn) {
+    res.redirect("/");
+    return;
+  }
+
+  res.render("login");
+});
+
+router.get("/dashboard", withAuth, async (req, res) => {
+  try {
+    const postData = await Post.findAll({
+      include: [User],
+      where: {
+        user_id: req.session.user_id,
+      },
+    });
+    console.log(JSON.stringify(postData));
+    const posts = postData.map((post) => post.get({ plain: true }));
     if (req.session.loggedIn) {
-        res.redirect('/');
-        return;
+      res.render("dashboard", { posts, loggedIn: req.session.loggedIn });
+      return;
     }
-    res.render('login');
+  } catch (err) {
+    res.json(err);
+  }
 });
 
-router.get('/signup', (req, res) => {
-    if (req.session.loggedIn) {
-        res.redirect('/');
-        return;
+
+router.get("/post/:id", withAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const postData = await Post.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          attributes: ["username"],
+        },
+      ],
+    });
+    let postedBy = false;
+    if (postData.user_id === req.session.user_id) {
+      postedBy = true;
     }
-    res.render('signup');
-});
 
-router.get('/post/:id', (req, res) => {
-    Post.findOne({
-        where: {
-            id: req.params.id
-        },
-        attributes: [
-            'id',
-            'title',
-            'content',
-            'created_at'
-        ],
-        include: [
-            {
-                model: Comment,
-                attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
-                include: {
-                    model: User,
-                    attributes: ['username']
-                }
-            },
-            {
-                model: User,
-                attributes: ['username']
-            }
-        ]
-    })
-    .then(dbPostData => {
-        if (!dbPostData) {
-            res.status(404).json({ message: 'No post found with this id' });
-            return;
-        }
-        const post = dbPostData.get({ plain: true });
-        res.render('single-post', { post, loggedIn: req.session.loggedIn });
-    })
-    .catch(err => {
-        console.log(err);
-        res.status(500).json(err);
+    const post = postData.get({ plain: true });
+
+    const commentData = await Comment.findAll({
+      include: [User],
+      where: {
+        post_id: req.params.id,
+      },
     });
-});
 
-router.get('/dashboard', withAuth, (req, res) => {
-    Post.findAll({
-        where: {
-            user_id: req.session.user_id
-        },
-        attributes: [
-            'id',
-            'title',
-            'content',
-            'created_at'
-        ],
-        include: [
-            {
-                model: Comment,
-                attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
-                include: {
-                    model: User,
-                    attributes: ['username']
-                }
-            },
-            {
-                model: User,
-                attributes: ['username']
-            }
-        ]
-    })
-    .then(dbPostData => {
-        const posts = dbPostData.map(post => post.get({ plain: true }));
-        res.render('dashboard', { posts, loggedIn: true });
-    })
-    .catch(err => {
-        console.log(err);
-        res.status(500).json(err);
+    const comments = commentData.map((comment) => comment.get({ plain: true }));
+
+    res.render("post", {
+      post,
+      comments,
+      logged_in: req.session.logged_in,
+      postedBy,
     });
-});
-
-router.get('/new', withAuth, (req, res) => {
-    res.render('new-post');
+  } catch (err) {
+    res.status(500).json(err);
+  }
 });
 
 module.exports = router;

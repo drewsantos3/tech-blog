@@ -1,0 +1,70 @@
+<div class='mb-4 justify-center mx-auto'>
+    <h2>{{post.title}}</h2>
+    <h5>{{post.body}}</h5>
+        <p>Posted by: {{post.user.username}}</p>
+            {{!-- <p>{{post.createdAt}}</p> --}}
+         <p>Created: {{format_date post.createdAt}}</p>
+
+
+{{#if postedBy}}
+<button class="reveal-update-btn btn">
+Update post
+</button>
+{{/if}}
+
+<form class="form update-post-form hidden">
+    <div class="form-group">
+        <label for="post-title">Post Title:</label>
+        <input class="form-input" type="text" id="post-title" name="post-title" />
+    </div>
+    <div class="form-group">
+        <label for="post-body">Post Body:</label>
+        <input class="form-input" type="text" id="post-body" name="post-body" />
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary" data-id="{{post.id}}">Update</button>
+    </div>
+</form>
+
+
+
+            
+
+    <button class="reveal-btn btn">Add a comment</button>
+
+
+        <form class="form new-comment-form mt-4 hidden">
+            <div class="form-group">
+            <label>Comment:</label>
+            <input class="form-input" type="text" id="comment-body" name="comment-body" />
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary" data-id="{{post.id}}">Add</button>
+            </div>
+        </form>
+
+     <h5 class="mt-4">Comments:</h5>
+
+
+    {{#each comments as |comment|}}
+        <div class='mb-4 d-flex post-list'>
+            {{!-- <a href="/post/{{post.id}}"> --}}
+                {{!-- <button class="btn btn-warning"> --}}
+                <h5>{{comment.body}}</h5>
+                    <p>Posted by: {{comment.user.username}}</p>
+                    {{!-- <p>{{post.createdAt}}</p> --}}
+                    <p>{{format_date comment.createdAt}}</p>
+                    {{!-- </button> --}}
+                {{!-- </a> --}}
+            {{!-- <div class="col-md-4">
+                <button class="btn btn-sm btn-danger" data-id="{{comment.id}}">DELETE</button>
+            </div> --}}
+        </div>
+    {{/each}}
+
+            <div></div>
+
+</div>
+
+
+<script src="/js/post.js"></script>
